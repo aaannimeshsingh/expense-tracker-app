@@ -490,12 +490,6 @@ const IntegrationsPage = () => {
                         <li>• Spending trends and charts</li>
                         <li>• Top expenses and insights</li>
                       </ul>
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                        <p className="text-xs text-yellow-800">
-                          ⚠️ <strong>Note:</strong> Email sending is currently in demo mode. The report is prepared but not actually sent via email. 
-                          To enable real email sending, you need to configure an email service (like Gmail SMTP, SendGrid, or AWS SES) in the backend.
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
