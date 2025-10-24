@@ -85,7 +85,7 @@ const ProfilePage = () => {
         },
       };
 
-      const { data } = await axios.put('http://localhost:5001/api/users/profile', {
+      const { data } = await axios.put('https://expense-tracker-app-nsco.onrender.com/api/users/profile', {
         name: formData.name,
         profilePicture: formData.profilePicture
       }, config);

@@ -21,7 +21,7 @@ const ReportsPage = () => {
   const COLORS = ['#4F46E5', '#22C55E', '#EAB308', '#EC4899', '#3B82F6', '#F97316', '#8B5CF6'];
 
   // Get API URL from environment
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://expense-tracker-app-nsco.onrender.com';
 
   useEffect(() => {
     fetchExpenses();

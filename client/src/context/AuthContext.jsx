@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const AuthContext = createContext();
 
 // ✅ FIXED: Use environment variable for production
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://expense-tracker-app-nsco.onrender.com';
 
 // ✅ Set Axios defaults
 axios.defaults.baseURL = API_BASE_URL;

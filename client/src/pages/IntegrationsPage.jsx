@@ -78,7 +78,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.post(
-        'http://localhost:5001/api/ai/chat',
+        'https://expense-tracker-app-nsco.onrender.com/api/ai/chat',
         { message: chatInput, history: chatMessages },
         config
       );
@@ -127,7 +127,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.post(
-        'http://localhost:5001/api/integrations/email/send-report',
+        'https://expense-tracker-app-nsco.onrender.com/api/integrations/email/send-report',
         emailForm,
         config
       );
@@ -156,7 +156,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.post(
-        'http://localhost:5001/api/integrations/calendar/sync',
+        'https://expense-tracker-app-nsco.onrender.com/api/integrations/calendar/sync',
         { month: selectedMonth + 1, year: selectedYear },
         config
       );
@@ -207,7 +207,7 @@ const IntegrationsPage = () => {
   const fetchExportHistory = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get('http://localhost:5001/api/integrations/export/history', config);
+      const { data } = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/integrations/export/history', config);
       setExportHistory(data);
     } catch (err) {
       console.error('Error fetching export history:', err);
@@ -227,7 +227,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.get(
-        `http://localhost:5001/api/integrations/export/${format}`,
+        `https://expense-tracker-app-nsco.onrender.com/api/integrations/export/${format}`,
         config
       );
       

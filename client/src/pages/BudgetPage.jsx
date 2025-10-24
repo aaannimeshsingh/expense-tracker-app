@@ -41,9 +41,9 @@ const BudgetPage = () => {
       };
       
       const [budgetsRes, statusRes, summaryRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/budgets', config),
-        axios.get('http://localhost:5001/api/budgets/status', config),
-        axios.get('http://localhost:5001/api/budgets/summary', config)
+        axios.get('https://expense-tracker-app-nsco.onrender.com/api/budgets', config),
+        axios.get('https://expense-tracker-app-nsco.onrender.com/api/budgets/status', config),
+        axios.get('https://expense-tracker-app-nsco.onrender.com/api/budgets/summary', config)
       ]);
       
       setBudgets(budgetsRes.data);
@@ -71,7 +71,7 @@ const BudgetPage = () => {
       if (editingBudget) {
         // Update existing budget
         await axios.put(
-          `http://localhost:5001/api/budgets/${editingBudget._id}`,
+          `https://expense-tracker-app-nsco.onrender.com/api/budgets/${editingBudget._id}`,
           formData,
           config
         );
@@ -79,7 +79,7 @@ const BudgetPage = () => {
       } else {
         // Create new budget
         await axios.post(
-          'http://localhost:5001/api/budgets',
+          'https://expense-tracker-app-nsco.onrender.com/api/budgets',
           formData,
           config
         );
@@ -122,7 +122,7 @@ const BudgetPage = () => {
         headers: { Authorization: `Bearer ${user.token}` }
       };
       
-      await axios.delete(`http://localhost:5001/api/budgets/${id}`, config);
+      await axios.delete(`https://expense-tracker-app-nsco.onrender.com/api/budgets/${id}`, config);
       alert('Budget deleted successfully!');
       fetchData();
       

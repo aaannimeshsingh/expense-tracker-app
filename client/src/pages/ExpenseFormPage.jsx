@@ -46,7 +46,7 @@ const ExpenseFormPage = () => {
   const fetchExpense = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(`http://localhost:5001/api/expenses/${id}`, config);
+      const { data } = await axios.get(`https://expense-tracker-app-nsco.onrender.com/api/expenses/${id}`, config);
       setExpense({
         description: data.description,
         amount: data.amount,
@@ -277,7 +277,7 @@ const ExpenseFormPage = () => {
 
     setIsLoadingSuggestion(true);
     try {
-      const { data } = await axios.post('http://localhost:5001/api/categories/suggest', { description });
+      const { data } = await axios.post('https://expense-tracker-app-nsco.onrender.com/api/categories/suggest', { description });
       setAiSuggestion(data);
 
       if (data.confidence > 0.7 && !expense.category) {
@@ -316,10 +316,10 @@ const ExpenseFormPage = () => {
       };
 
       if (id) {
-        await axios.put(`http://localhost:5001/api/expenses/${id}`, expense, config);
+        await axios.put(`https://expense-tracker-app-nsco.onrender.com/api/expenses/${id}`, expense, config);
         setMessage('Expense updated successfully!');
       } else {
-        await axios.post('http://localhost:5001/api/expenses', expense, config);
+        await axios.post('https://expense-tracker-app-nsco.onrender.com/api/expenses', expense, config);
         setMessage('Expense saved successfully!');
       }
 

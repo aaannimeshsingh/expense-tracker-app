@@ -29,11 +29,11 @@ const InsightsPage = () => {
       };
 
       // Fetch AI insights
-      const insightsResponse = await axios.get('http://localhost:5001/api/ai/insights', config);
+      const insightsResponse = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/ai/insights', config);
       setInsights(insightsResponse.data.insights);
 
       // 🔧 FIXED: Changed from /predict-spending to /predict
-      const predictionResponse = await axios.get('http://localhost:5001/api/ai/predict', config);
+      const predictionResponse = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/ai/predict', config);
       setPrediction(predictionResponse.data);
 
       setLoading(false);

@@ -30,7 +30,7 @@ const Navbar = () => {
       }
       
       try {
-        const res = await axios.get('http://localhost:5001/api/notifications', {
+        const res = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/notifications', {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },

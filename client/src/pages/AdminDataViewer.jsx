@@ -14,7 +14,7 @@ const AdminDataViewer = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5001/api/debug/all-data');
+      const response = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/debug/all-data');
       setData(response.data);
       setLoading(false);
     } catch (error) {
