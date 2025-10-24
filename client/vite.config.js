@@ -4,41 +4,29 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   build: {
+    outDir: 'dist',
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // Split node_modules into separate chunks
-          if (id.includes('node_modules')) {
-            // React core libraries
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-vendor';
-            }
-            
-            // Chart libraries
-            if (id.includes('recharts')) {
-              return 'charts-vendor';
-            }
-            
-            // Icon libraries
-            if (id.includes('lucide-react')) {
-              return 'icons-vendor';
-            }
-            
-            // All other node_modules
-            return 'vendor';
-          }
+        manualChunks: {
+          // Group React core
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Group charting library
+          'charts-vendor': ['recharts'],
+          // Group other heavy dependencies
+          'vendor': ['axios']
         }
       }
-    },
-    chunkSizeWarningLimit: 600,
-    sourcemap: false,
+    }
   },
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:5000',
+        target: process.env.VITE_API_URL || 'http://localhost:5001',
         changeOrigin: true,
       },
     },
