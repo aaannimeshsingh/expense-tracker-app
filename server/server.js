@@ -12,8 +12,14 @@ const app = express();
 app.use('/uploads', express.static('uploads'));
 
 // CORS Configuration
+// CORS Configuration
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: [
+    'http://localhost:5173', 
+    'http://127.0.0.1:5173',
+    'https://expense-tracker-app-two-ruddy.vercel.app',  // ✅ Your Vercel domain
+    'https://*.vercel.app'  // ✅ Allow all Vercel preview URLs
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Authorization'],
