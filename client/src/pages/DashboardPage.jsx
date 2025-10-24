@@ -7,6 +7,10 @@ import { DollarSign, TrendingUp, CreditCard, PlusCircle, Edit, Trash2, Search, T
 const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  // Get API URL from environment
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+  
   const [expenses, setExpenses] = useState([]);
   const [filteredExpenses, setFilteredExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,13 +23,13 @@ const DashboardPage = () => {
     thisMonth: 0,
   });
 
-  // NEW: Budget state
+  // Budget state
   const [budgetSummary, setBudgetSummary] = useState(null);
   const [budgetStatus, setBudgetStatus] = useState([]);
 
   useEffect(() => {
     fetchExpenses();
-    fetchBudgetData(); // NEW: Fetch budget data
+    fetchBudgetData();
   }, []);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ const DashboardPage = () => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-      const { data } = await axios.get('http://localhost:5001/api/expenses', config);
+      const { data } = await axios.get(`${API_URL}/api/expenses`, config);
       setExpenses(data);
       setLoading(false);
     } catch (error) {
@@ -48,7 +52,6 @@ const DashboardPage = () => {
     }
   };
 
-  // NEW: Fetch budget data
   const fetchBudgetData = async () => {
     try {
       const config = {
@@ -58,8 +61,8 @@ const DashboardPage = () => {
       };
       
       const [summaryRes, statusRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/budgets/summary', config),
-        axios.get('http://localhost:5001/api/budgets/status', config)
+        axios.get(`${API_URL}/api/budgets/summary`, config),
+        axios.get(`${API_URL}/api/budgets/status`, config)
       ]);
       
       setBudgetSummary(summaryRes.data);
@@ -121,9 +124,9 @@ const DashboardPage = () => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-      await axios.delete(`http://localhost:5001/api/expenses/${id}`, config);
+      await axios.delete(`${API_URL}/api/expenses/${id}`, config);
       fetchExpenses();
-      fetchBudgetData(); // Refresh budget data after deletion
+      fetchBudgetData();
     } catch (error) {
       console.error('Error deleting expense:', error);
       alert('Failed to delete expense');
@@ -181,7 +184,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* NEW: Budget Overview Widget */}
+      {/* Budget Overview Widget */}
       {budgetSummary && budgetSummary.budgetCount > 0 && (
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
           <div className="flex justify-between items-start mb-4">
@@ -282,7 +285,6 @@ const DashboardPage = () => {
       {/* Search & Filters */}
       <div className="bg-white rounded-xl shadow-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
@@ -297,7 +299,6 @@ const DashboardPage = () => {
             />
           </div>
 
-          {/* Category Filter */}
           <select
             id="categoryFilter"
             name="categoryFilter"
@@ -311,7 +312,6 @@ const DashboardPage = () => {
             ))}
           </select>
 
-          {/* Date Range - Start */}
           <input
             type="date"
             id="filterStartDate"
@@ -323,7 +323,6 @@ const DashboardPage = () => {
             autoComplete="off"
           />
 
-          {/* Date Range - End */}
           <input
             type="date"
             id="filterEndDate"
@@ -402,12 +401,14 @@ const DashboardPage = () => {
                       <button
                         onClick={() => navigate(`/add-expense/${expense._id}`)}
                         className="text-indigo-600 hover:text-indigo-800 mr-3"
+                        title="Edit"
                       >
                         <Edit className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => deleteExpense(expense._id)}
                         className="text-red-600 hover:text-red-800"
+                        title="Delete"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
