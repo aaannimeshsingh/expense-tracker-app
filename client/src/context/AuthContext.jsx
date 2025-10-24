@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
+// ✅ FIXED: Use environment variable for production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
 // ✅ Set Axios defaults
-axios.defaults.baseURL = 'http://localhost:5001';
+axios.defaults.baseURL = API_BASE_URL;
 axios.defaults.headers.post['Content-Type'] = 'application/json';
 
 export const AuthProvider = ({ children }) => {
@@ -60,7 +63,7 @@ export const AuthProvider = ({ children }) => {
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message === 'Network Error') {
-        errorMessage = 'Cannot connect to server. Make sure the backend is running on port 5000.';
+        errorMessage = 'Cannot connect to server. Please check your connection.';
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -106,7 +109,7 @@ export const AuthProvider = ({ children }) => {
         login, 
         register, 
         logout, 
-        updateUserProfile, // 🆕 NEW FUNCTION
+        updateUserProfile,
         loading, 
         error, 
         setError 
