@@ -78,7 +78,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.post(
-        'https://expense-tracker-app-nsco.onrender.com/api/ai/chat',
+        'http://localhost:5001/api/ai/chat',
         { message: chatInput, history: chatMessages },
         config
       );
@@ -127,7 +127,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.post(
-        'https://expense-tracker-app-nsco.onrender.com/api/integrations/email/send-report',
+        'http://localhost:5001/api/integrations/email/send-report',
         emailForm,
         config
       );
@@ -156,7 +156,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.post(
-        'https://expense-tracker-app-nsco.onrender.com/api/integrations/calendar/sync',
+        'http://localhost:5001/api/integrations/calendar/sync',
         { month: selectedMonth + 1, year: selectedYear },
         config
       );
@@ -207,7 +207,7 @@ const IntegrationsPage = () => {
   const fetchExportHistory = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/integrations/export/history', config);
+      const { data } = await axios.get('http://localhost:5001/api/integrations/export/history', config);
       setExportHistory(data);
     } catch (err) {
       console.error('Error fetching export history:', err);
@@ -227,7 +227,7 @@ const IntegrationsPage = () => {
       };
 
       const { data } = await axios.get(
-        `https://expense-tracker-app-nsco.onrender.com/api/integrations/export/${format}`,
+        `http://localhost:5001/api/integrations/export/${format}`,
         config
       );
       
@@ -490,6 +490,12 @@ const IntegrationsPage = () => {
                         <li>• Spending trends and charts</li>
                         <li>• Top expenses and insights</li>
                       </ul>
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                        <p className="text-xs text-yellow-800">
+                          ⚠️ <strong>Note:</strong> Email sending is currently in demo mode. The report is prepared but not actually sent via email. 
+                          To enable real email sending, you need to configure an email service (like Gmail SMTP, SendGrid, or AWS SES) in the backend.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
