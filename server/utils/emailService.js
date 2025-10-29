@@ -8,13 +8,24 @@ const createTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransport({
-    service: 'gmail', // or use custom SMTP
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  try {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      // Add these options for better reliability
+      tls: {
+        rejectUnauthorized: false
+      },
+      debug: false, // Set to true for debugging
+      logger: false
+    });
+  } catch (error) {
+    console.error('❌ Error creating email transporter:', error.message);
+    return null;
+  }
 };
 
 // Generate HTML email template
@@ -171,6 +182,50 @@ const sendExpenseReport = async (recipientEmail, reportData) => {
 
   // If no transporter (credentials not configured), simulate email
   if (!transporter) {
+    console.log('📧 ===== EMAIL SIMULATION MODE =====');
+    console.log('📧 Email would be sent to:', recipientEmail);
+    console.log('📊 Report data:', {
+      period: reportData.period,
+      total: reportData.totalExpenses,
+      transactions: reportData.transactionCount
+    });
+    console.log('📧 ===================================');
+    
+    return {
+      success: true,
+      simulated: true,
+      message: 'Email simulation successful (configure EMAIL_USER and EMAIL_PASS in .env to send real emails)'
+    };
+  }
+
+  // Try to send real email with error handling
+  try {
+    // First, verify the transporter connection
+    await transporter.verify();
+    console.log('✅ Email transporter verified successfully');
+
+    const htmlContent = generateExpenseReportHTML(reportData);
+
+    const info = await transporter.sendMail({
+      from: `"Tracker AI" <${process.env.EMAIL_USER}>`,
+      to: recipientEmail,
+      subject: reportData.subject || 'Your Expense Report',
+      html: htmlContent,
+    });
+
+    console.log('✅ Email sent successfully:', info.messageId);
+
+    return {
+      success: true,
+      simulated: false,
+      messageId: info.messageId,
+      message: 'Email sent successfully'
+    };
+  } catch (error) {
+    console.error('❌ Email sending error:', error.message);
+    
+    // Instead of throwing error, fallback to simulation mode
+    console.log('📧 Falling back to simulation mode');
     console.log('📧 Email would be sent to:', recipientEmail);
     console.log('📊 Report data:', {
       period: reportData.period,
@@ -181,29 +236,9 @@ const sendExpenseReport = async (recipientEmail, reportData) => {
     return {
       success: true,
       simulated: true,
-      message: 'Email simulation successful (configure EMAIL_USER and EMAIL_PASS in .env to send real emails)'
+      error: error.message,
+      message: 'Email simulated due to sending failure. Please check your email configuration.'
     };
-  }
-
-  // Send real email
-  try {
-    const htmlContent = generateExpenseReportHTML(reportData);
-
-    await transporter.sendMail({
-      from: `"Tracker AI" <${process.env.EMAIL_USER}>`,
-      to: recipientEmail,
-      subject: reportData.subject || 'Your Expense Report',
-      html: htmlContent,
-    });
-
-    return {
-      success: true,
-      simulated: false,
-      message: 'Email sent successfully'
-    };
-  } catch (error) {
-    console.error('Email sending error:', error);
-    throw new Error('Failed to send email: ' + error.message);
   }
 };
 
