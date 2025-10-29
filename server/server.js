@@ -15,31 +15,27 @@ app.use('/uploads', express.static('uploads'));
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'http://127.0.0.1:5173',
   'https://expense-tracker-app-two-ruddy.vercel.app',
-  'https://expense-tracker-app-git-main-aaannimeshsinghs-projects.vercel.app'
+  'https://expense-tracker-app-git-main-aaannimeshsingh5-projects.vercel.app',
+  'https://expense-tracker-app-nsco.onrender.com'
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, curl)
+  origin: function(origin, callback) {
     if (!origin) return callback(null, true);
-    
-    // Check if origin is in allowed list OR ends with .vercel.app
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('❌ CORS blocked origin:', origin);
-      callback(null, true); // ✅ CHANGED: Allow anyway for debugging
+      console.log('Blocked origin:', origin);
+      callback(null, true); // Allow anyway for debugging
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Authorization'],
   credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.options('*', cors());
 
 // ✅ ADD: Explicit OPTIONS handling for preflight
 app.options('*', cors());
