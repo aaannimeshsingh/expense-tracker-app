@@ -15,6 +15,10 @@ import {
 
 const IntegrationsPage = () => {
   const { user } = useAuth();
+  
+  // ✅ FIXED: Use environment variable for API URL
+  const API_URL = import.meta.env.VITE_API_URL || 'https://expense-tracker-app-nsco.onrender.com';
+  
   const [activeTab, setActiveTab] = useState('ai-chat');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -49,6 +53,12 @@ const IntegrationsPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [calendarLoading, setCalendarLoading] = useState(false);
 
+  // 🐛 DEBUG: Log API URL (remove after testing)
+  useEffect(() => {
+    console.log('🌐 API_URL:', API_URL);
+    console.log('🔧 Environment:', import.meta.env.MODE);
+  }, []);
+
   useEffect(() => {
     fetchExportHistory();
     if (activeTab === 'calendar') {
@@ -77,8 +87,9 @@ const IntegrationsPage = () => {
         }
       };
 
+      // ✅ FIXED: Use API_URL variable
       const { data } = await axios.post(
-        'http://localhost:5001/api/ai/chat',
+        `${API_URL}/api/ai/chat`,
         { message: chatInput, history: chatMessages },
         config
       );
@@ -126,8 +137,9 @@ const IntegrationsPage = () => {
         }
       };
 
+      // ✅ FIXED: Use API_URL variable
       const { data } = await axios.post(
-        'http://localhost:5001/api/integrations/email/send-report',
+        `${API_URL}/api/integrations/email/send-report`,
         emailForm,
         config
       );
@@ -155,8 +167,9 @@ const IntegrationsPage = () => {
         }
       };
 
+      // ✅ FIXED: Use API_URL variable
       const { data } = await axios.post(
-        'http://localhost:5001/api/integrations/calendar/sync',
+        `${API_URL}/api/integrations/calendar/sync`,
         { month: selectedMonth + 1, year: selectedYear },
         config
       );
@@ -207,7 +220,8 @@ const IntegrationsPage = () => {
   const fetchExportHistory = async () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get('http://localhost:5001/api/integrations/export/history', config);
+      // ✅ FIXED: Use API_URL variable
+      const { data } = await axios.get(`${API_URL}/api/integrations/export/history`, config);
       setExportHistory(data);
     } catch (err) {
       console.error('Error fetching export history:', err);
@@ -226,8 +240,9 @@ const IntegrationsPage = () => {
         responseType: 'blob'
       };
 
+      // ✅ FIXED: Use API_URL variable
       const { data } = await axios.get(
-        `http://localhost:5001/api/integrations/export/${format}`,
+        `${API_URL}/api/integrations/export/${format}`,
         config
       );
       

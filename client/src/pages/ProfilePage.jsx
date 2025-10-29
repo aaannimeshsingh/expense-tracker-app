@@ -5,6 +5,10 @@ import { User, Mail, Edit, Camera, Save, X, RotateCw } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, updateUserProfile } = useAuth();
+  
+  // ✅ FIXED: Use environment variable for API URL
+  const API_URL = import.meta.env.VITE_API_URL || 'https://expense-tracker-app-nsco.onrender.com';
+  
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -85,7 +89,8 @@ const ProfilePage = () => {
         },
       };
 
-      const { data } = await axios.put('https://expense-tracker-app-nsco.onrender.com/api/users/profile', {
+      // ✅ FIXED: Use API_URL variable instead of hardcoded localhost
+      const { data } = await axios.put(`${API_URL}/api/users/profile`, {
         name: formData.name,
         profilePicture: formData.profilePicture
       }, config);
@@ -174,8 +179,7 @@ const ProfilePage = () => {
                 disabled={!isEditing || loading}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
                 required
-                // FIX: Changed 'autocomplete' to 'autoComplete' for JSX
-                autoComplete="name" 
+                autoComplete="name"
               />
             </div>
 
@@ -192,8 +196,7 @@ const ProfilePage = () => {
                 onChange={handleFormChange}
                 disabled={true}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100 text-gray-500 cursor-not-allowed"
-                // FIX: Changed 'autocomplete' to 'autoComplete' for JSX
-                autoComplete="email" 
+                autoComplete="email"
               />
               <p className="text-xs text-gray-500 mt-1">Email address is read-only.</p>
             </div>
