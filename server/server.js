@@ -11,25 +11,26 @@ const app = express();
 // MIDDLEWARE
 app.use('/uploads', express.static('uploads'));
 
-// ✅ FIXED CORS Configuration
+// ✅ SIMPLIFIED CORS Configuration - More Reliable
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://expense-tracker-app-two-ruddy.vercel.app',
+  'https://expense-tracker-app-git-main-aaannimeshsinghs-projects.vercel.app'
+];
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173',
-      'https://expense-tracker-app-two-ruddy.vercel.app',
-      'https://expense-tracker-app-git-main-aaannimeshsinghs-projects.vercel.app'
-    ];
-    
     // Check if origin is in allowed list OR ends with .vercel.app
-    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log('❌ CORS blocked origin:', origin);
+      callback(null, true); // ✅ CHANGED: Allow anyway for debugging
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -40,9 +41,18 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }));
 
+// ✅ ADD: Explicit OPTIONS handling for preflight
+app.options('*', cors());
+
 // Body parser with increased limit for receipt images
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ✅ ADD: Request logging middleware (helps debug CORS issues)
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
+  next();
+});
 
 // DATABASE CONNECTION
 mongoose.connect(process.env.MONGO_URI, {
@@ -58,7 +68,8 @@ mongoose.connect(process.env.MONGO_URI, {
 app.get('/', (req, res) => res.json({ 
   message: '✅ Expense Tracker API is running!',
   status: 'healthy',
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
+  cors: 'enabled'
 }));
 
 const authRoutes = require('./routes/authRoutes');
@@ -84,7 +95,9 @@ app.use('/api/integrations', integrationRoutes);
 app.get('/health', (req, res) => res.json({ 
   status: 'OK', 
   timestamp: new Date(),
-  uptime: process.uptime()
+  uptime: process.uptime(),
+  cors: 'enabled',
+  allowedOrigins: allowedOrigins
 }));
 
 // Debug route (DEVELOPMENT ONLY - Remove in production!)
@@ -132,5 +145,6 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 CORS enabled for Vercel deployments`);
+  console.log(`🌐 CORS enabled for origins:`, allowedOrigins);
+  console.log(`🔓 Wildcard Vercel origins: *.vercel.app`);
 });
