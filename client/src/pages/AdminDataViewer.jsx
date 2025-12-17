@@ -7,6 +7,9 @@ const AdminDataViewer = () => {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('expenses'); // 'expenses' or 'users'
 
+  // ✅ FIXED: Use environment variable for API URL
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -14,7 +17,8 @@ const AdminDataViewer = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/debug/all-data');
+      // ✅ FIXED: Use API_URL from environment
+      const response = await axios.get(`${API_URL}/api/debug/all-data`);
       setData(response.data);
       setLoading(false);
     } catch (error) {

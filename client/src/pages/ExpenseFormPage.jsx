@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PlusCircle, Save, Sparkles, Upload, X, Image as ImageIcon, Scan, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 import Tesseract from 'tesseract.js';
 
 const ExpenseFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, api } = useAuth(); // ✅ Get api instance
   
   const [expense, setExpense] = useState({
     description: '',
@@ -40,13 +39,15 @@ const ExpenseFormPage = () => {
   ];
 
   useEffect(() => {
-    if (id) fetchExpense();
-  }, [id]);
+    if (id && user?.token) {
+      fetchExpense();
+    }
+  }, [id, user?.token]);
 
   const fetchExpense = async () => {
     try {
-      const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(`https://expense-tracker-app-nsco.onrender.com/api/expenses/${id}`, config);
+      // ✅ Use api instance
+      const { data } = await api.get(`/api/expenses/${id}`);
       setExpense({
         description: data.description,
         amount: data.amount,
@@ -58,7 +59,7 @@ const ExpenseFormPage = () => {
         setReceiptPreview(data.receipt);
       }
     } catch (err) {
-      console.error('Error fetching expense:', err);
+      console.error('❌ Error fetching expense:', err);
       setError('Failed to load expense');
     }
   };
@@ -113,7 +114,7 @@ const ExpenseFormPage = () => {
       }
 
     } catch (err) {
-      console.error('OCR Error:', err);
+      console.error('❌ OCR Error:', err);
       setError('Failed to scan receipt. Please try again or enter manually.');
     } finally {
       setIsScanning(false);
@@ -277,14 +278,15 @@ const ExpenseFormPage = () => {
 
     setIsLoadingSuggestion(true);
     try {
-      const { data } = await axios.post('https://expense-tracker-app-nsco.onrender.com/api/categories/suggest', { description });
+      // ✅ Use api instance
+      const { data } = await api.post('/api/categories/suggest', { description });
       setAiSuggestion(data);
 
       if (data.confidence > 0.7 && !expense.category) {
         setExpense(prev => ({ ...prev, category: data.category }));
       }
     } catch (err) {
-      console.error('Error getting AI suggestion:', err);
+      console.error('❌ Error getting AI suggestion:', err);
     } finally {
       setIsLoadingSuggestion(false);
     }
@@ -303,23 +305,23 @@ const ExpenseFormPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!user?.token) {
+      setError('Please log in to save expenses');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
     setError('');
 
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-
+      // ✅ Use api instance - no need for manual headers
       if (id) {
-        await axios.put(`https://expense-tracker-app-nsco.onrender.com/api/expenses/${id}`, expense, config);
+        await api.put(`/api/expenses/${id}`, expense);
         setMessage('Expense updated successfully!');
       } else {
-        await axios.post('https://expense-tracker-app-nsco.onrender.com/api/expenses', expense, config);
+        await api.post('/api/expenses', expense);
         setMessage('Expense saved successfully!');
       }
 
@@ -336,8 +338,13 @@ const ExpenseFormPage = () => {
         navigate('/', { replace: true });
       }, 1500);
     } catch (err) {
-      console.error('Error saving expense:', err);
-      setError(err.response?.data?.message || 'Failed to save expense. Please try again.');
+      console.error('❌ Error saving expense:', err);
+      
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to save expense. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -566,8 +573,8 @@ const ExpenseFormPage = () => {
 
           <button
             type="submit"
-            disabled={loading || isScanning}
-            className="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-200 disabled:opacity-50"
+            disabled={loading || isScanning || !user?.token}
+            className="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5 mr-2" />
             {loading ? 'Saving...' : id ? 'Update Expense' : 'Save Expense'}

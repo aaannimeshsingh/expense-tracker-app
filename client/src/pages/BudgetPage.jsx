@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 import { DollarSign, TrendingUp, AlertTriangle, Target, Plus, Edit, Trash2, CheckCircle } from 'lucide-react';
 
 const BudgetPage = () => {
-  const { user } = useAuth();
+  const { user, api } = useAuth(); // ✅ Get api instance from AuthContext
   const [budgets, setBudgets] = useState([]);
   const [budgetStatus, setBudgetStatus] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -30,28 +29,36 @@ const BudgetPage = () => {
   ];
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user?.token) {
+      fetchData();
+    }
+  }, [user?.token]);
 
   const fetchData = async () => {
+    if (!user?.token) {
+      console.log('⏭️ Skipping budget fetch: No user token');
+      return;
+    }
+
     setLoading(true);
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` }
-      };
-      
+      // ✅ Use api instance - it already has auth headers
       const [budgetsRes, statusRes, summaryRes] = await Promise.all([
-        axios.get('https://expense-tracker-app-nsco.onrender.com/api/budgets', config),
-        axios.get('https://expense-tracker-app-nsco.onrender.com/api/budgets/status', config),
-        axios.get('https://expense-tracker-app-nsco.onrender.com/api/budgets/summary', config)
+        api.get('/api/budgets'),
+        api.get('/api/budgets/status'),
+        api.get('/api/budgets/summary')
       ]);
       
       setBudgets(budgetsRes.data);
       setBudgetStatus(statusRes.data.budgetStatus || []);
       setSummary(summaryRes.data);
       
+      console.log('✅ Budget data fetched successfully');
     } catch (error) {
-      console.error('Error fetching budget data:', error);
+      console.error('❌ Error fetching budget data:', error);
+      if (error.response?.status === 401) {
+        console.warn('🔒 Authentication failed. Please log in again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -61,28 +68,16 @@ const BudgetPage = () => {
     e.preventDefault();
     
     try {
-      const config = {
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}` 
-        }
-      };
-      
       if (editingBudget) {
         // Update existing budget
-        await axios.put(
-          `https://expense-tracker-app-nsco.onrender.com/api/budgets/${editingBudget._id}`,
-          formData,
-          config
+        await api.put(
+          `/api/budgets/${editingBudget._id}`,
+          formData
         );
         alert('Budget updated successfully!');
       } else {
         // Create new budget
-        await axios.post(
-          'https://expense-tracker-app-nsco.onrender.com/api/budgets',
-          formData,
-          config
-        );
+        await api.post('/api/budgets', formData);
         alert('Budget created successfully!');
       }
       
@@ -98,7 +93,7 @@ const BudgetPage = () => {
       fetchData();
       
     } catch (error) {
-      console.error('Error saving budget:', error);
+      console.error('❌ Error saving budget:', error);
       alert(error.response?.data?.message || 'Failed to save budget');
     }
   };
@@ -118,16 +113,12 @@ const BudgetPage = () => {
     if (!window.confirm('Are you sure you want to delete this budget?')) return;
     
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` }
-      };
-      
-      await axios.delete(`https://expense-tracker-app-nsco.onrender.com/api/budgets/${id}`, config);
+      await api.delete(`/api/budgets/${id}`);
       alert('Budget deleted successfully!');
       fetchData();
       
     } catch (error) {
-      console.error('Error deleting budget:', error);
+      console.error('❌ Error deleting budget:', error);
       alert('Failed to delete budget');
     }
   };
@@ -224,7 +215,7 @@ const BudgetPage = () => {
         </div>
       )}
 
-      {/* Budget Form (CORRECTED) */}
+      {/* Budget Form */}
       {showForm && (
         <div className="bg-white p-6 rounded-xl shadow-lg">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
@@ -240,7 +231,6 @@ const BudgetPage = () => {
                   Category
                 </label>
                 <select
-                  // ADDED: id and name
                   id="budgetCategory"
                   name="budgetCategory"
                   value={formData.category}
@@ -264,7 +254,6 @@ const BudgetPage = () => {
                   Monthly Limit ($)
                 </label>
                 <input
-                  // ADDED: id and name
                   id="monthlyLimit"
                   name="monthlyLimit"
                   type="number"
@@ -286,7 +275,6 @@ const BudgetPage = () => {
                   Alert Threshold (%)
                 </label>
                 <input
-                  // ADDED: id and name
                   id="alertThreshold"
                   name="alertThreshold"
                   type="number"
@@ -310,7 +298,6 @@ const BudgetPage = () => {
                   Notes (Optional)
                 </label>
                 <input
-                  // ADDED: id and name (changed from notes to budgetNotes for uniqueness)
                   id="budgetNotes"
                   name="budgetNotes"
                   type="text"

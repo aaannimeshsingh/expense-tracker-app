@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 import { 
   Brain, TrendingUp, TrendingDown, AlertTriangle, 
   CheckCircle, Info, Lightbulb, DollarSign, 
@@ -8,7 +7,9 @@ import {
 } from 'lucide-react';
 
 const InsightsPage = () => {
-  const { user } = useAuth();
+  // ✅ FIXED: Get api instance from AuthContext
+  const { user, api } = useAuth();
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [insights, setInsights] = useState([]);
@@ -23,23 +24,42 @@ const InsightsPage = () => {
     setLoading(true);
     setError('');
     
+    console.log('🧠 Fetching AI insights...');
+    console.log('   User:', user?.email);
+    console.log('   Token exists:', !!user?.token);
+    
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` }
-      };
-
-      // Fetch AI insights
-      const insightsResponse = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/ai/insights', config);
+      // ✅ FIXED: Use api instance from context (already has auth header)
+      console.log('📤 Fetching insights...');
+      const insightsResponse = await api.get('/api/ai/insights');
+      console.log('✅ Insights received:', insightsResponse.data);
       setInsights(insightsResponse.data.insights);
 
-      // 🔧 FIXED: Changed from /predict-spending to /predict
-      const predictionResponse = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/ai/predict', config);
+      console.log('📤 Fetching predictions...');
+      const predictionResponse = await api.get('/api/ai/predict');
+      console.log('✅ Predictions received:', predictionResponse.data);
       setPrediction(predictionResponse.data);
 
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching insights:', err);
-      setError('Failed to load AI insights');
+      console.error('❌ Error fetching insights:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      
+      // Better error messages
+      let errorMessage = 'Failed to load AI insights';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (err.message === 'Network Error') {
+        errorMessage = 'Cannot connect to server. Please check your connection.';
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -82,13 +102,23 @@ const InsightsPage = () => {
   if (error) {
     return (
       <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
-        <p className="text-red-700">{error}</p>
-        <button
-          onClick={fetchInsights}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-        >
-          Try Again
-        </button>
+        <div className="flex items-start space-x-3">
+          <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-red-700 font-semibold mb-2">{error}</p>
+            {error.includes('Authentication') && (
+              <p className="text-sm text-red-600 mb-3">
+                Your session may have expired. Please log out and log back in.
+              </p>
+            )}
+            <button
+              onClick={fetchInsights}
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

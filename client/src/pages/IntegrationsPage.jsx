@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 import {
   Mail,
   Download,
   Calendar,
   FileText,
-  CheckCircle,
   Loader2,
   Send,
   Bot,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 
 const IntegrationsPage = () => {
-  const { user } = useAuth();
-  
-  // ✅ FIXED: Use environment variable for API URL
-  const API_URL = import.meta.env.VITE_API_URL || 'https://expense-tracker-app-nsco.onrender.com';
+  const { user, api } = useAuth(); // ✅ Use api instance from AuthContext
   
   const [activeTab, setActiveTab] = useState('ai-chat');
   const [loading, setLoading] = useState(false);
@@ -53,14 +49,10 @@ const IntegrationsPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [calendarLoading, setCalendarLoading] = useState(false);
 
-  // 🐛 DEBUG: Log API URL (remove after testing)
   useEffect(() => {
-    console.log('🌐 API_URL:', API_URL);
-    console.log('🔧 Environment:', import.meta.env.MODE);
-  }, []);
-
-  useEffect(() => {
-    fetchExportHistory();
+    if (activeTab === 'export') {
+      fetchExportHistory();
+    }
     if (activeTab === 'calendar') {
       fetchCalendarData();
     }
@@ -80,29 +72,34 @@ const IntegrationsPage = () => {
     setIsChatLoading(true);
 
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`
-        }
-      };
-
-      // ✅ FIXED: Use API_URL variable
-      const { data } = await axios.post(
-        `${API_URL}/api/ai/chat`,
-        { message: chatInput, history: chatMessages },
-        config
-      );
+      // ✅ Use api instance from AuthContext (has correct baseURL and auth headers)
+      const { data } = await api.post('/api/ai/chat', { 
+        message: chatInput, 
+        history: chatMessages 
+      });
 
       const assistantMessage = { role: 'assistant', content: data.response };
       setChatMessages(prev => [...prev, assistantMessage]);
+      
     } catch (err) {
       console.error('AI Chat error:', err);
+      
+      let errorMsg = 'Sorry, I encountered an error. ';
+      
+      if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
+        errorMsg += 'Cannot connect to the server. Please check if the backend is running.';
+      } else if (err.response?.status === 401) {
+        errorMsg += 'Your session has expired. Please log in again.';
+      } else {
+        errorMsg += 'Please try asking something about your expenses, like "What did I spend the most on?" or "Show me my budget status."';
+      }
+      
       const errorMessage = { 
         role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try asking something about your expenses, like "What did I spend the most on?" or "Show me my budget status."' 
+        content: errorMsg
       };
       setChatMessages(prev => [...prev, errorMessage]);
+      
     } finally {
       setIsChatLoading(false);
     }
@@ -130,24 +127,22 @@ const IntegrationsPage = () => {
     setMessage('');
 
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`
-        }
-      };
+      const { data } = await api.post('/api/integrations/email/send-report', emailForm);
 
-      // ✅ FIXED: Use API_URL variable
-      const { data } = await axios.post(
-        `${API_URL}/api/integrations/email/send-report`,
-        emailForm,
-        config
-      );
-
-      setMessage('✅ Report sent successfully to ' + emailForm.recipientEmail);
-      setTimeout(() => setMessage(''), 3000);
+      setMessage(data.message || '✅ Report sent successfully to ' + emailForm.recipientEmail);
+      setTimeout(() => setMessage(''), 5000);
+      
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send email report');
+      console.error('Email report error:', err);
+      
+      if (err.code === 'ERR_NETWORK') {
+        setError('❌ Cannot connect to server. Please check if the backend is running.');
+      } else if (err.response?.status === 401) {
+        setError('❌ Your session has expired. Please log in again.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to send email report');
+      }
+      
     } finally {
       setLoading(false);
     }
@@ -160,23 +155,22 @@ const IntegrationsPage = () => {
   const fetchCalendarData = async () => {
     setCalendarLoading(true);
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`
-        }
-      };
-
-      // ✅ FIXED: Use API_URL variable
-      const { data } = await axios.post(
-        `${API_URL}/api/integrations/calendar/sync`,
-        { month: selectedMonth + 1, year: selectedYear },
-        config
-      );
+      const { data } = await api.post('/api/integrations/calendar/sync', { 
+        month: selectedMonth + 1, 
+        year: selectedYear 
+      });
 
       setCalendarData(data.calendar || {});
+      
     } catch (err) {
       console.error('Error fetching calendar data:', err);
+      
+      if (err.code === 'ERR_NETWORK') {
+        setError('❌ Cannot connect to server. Calendar data unavailable.');
+        setTimeout(() => setError(''), 3000);
+      }
+      setCalendarData({});
+      
     } finally {
       setCalendarLoading(false);
     }
@@ -219,12 +213,12 @@ const IntegrationsPage = () => {
 
   const fetchExportHistory = async () => {
     try {
-      const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      // ✅ FIXED: Use API_URL variable
-      const { data } = await axios.get(`${API_URL}/api/integrations/export/history`, config);
-      setExportHistory(data);
+      const { data } = await api.get('/api/integrations/export/history');
+      setExportHistory(data || []);
+      
     } catch (err) {
       console.error('Error fetching export history:', err);
+      setExportHistory([]);
     }
   };
 
@@ -234,19 +228,12 @@ const IntegrationsPage = () => {
     setMessage('');
 
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
+      const response = await api.get(`/api/integrations/export/${format}`, {
         params: exportFilters,
         responseType: 'blob'
-      };
-
-      // ✅ FIXED: Use API_URL variable
-      const { data } = await axios.get(
-        `${API_URL}/api/integrations/export/${format}`,
-        config
-      );
+      });
       
-      const url = window.URL.createObjectURL(new Blob([data]));
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
       
@@ -261,9 +248,18 @@ const IntegrationsPage = () => {
 
       fetchExportHistory();
       setTimeout(() => setMessage(''), 3000);
+      
     } catch (err) {
       console.error('Export error:', err);
-      setError(err.response?.data?.message || `Failed to export ${format}`);
+      
+      if (err.code === 'ERR_NETWORK') {
+        setError('❌ Cannot connect to server. Please check if the backend is running.');
+      } else if (err.response?.status === 401) {
+        setError('❌ Your session has expired. Please log in again.');
+      } else {
+        setError(err.response?.data?.message || `Failed to export ${format}`);
+      }
+      
     } finally {
       setLoading(false);
     }
@@ -278,13 +274,14 @@ const IntegrationsPage = () => {
 
       {/* Success/Error Messages */}
       {message && (
-        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md">
-          {message}
+        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md flex items-start">
+          <span>{message}</span>
         </div>
       )}
       {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
-          {error}
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-start">
+          <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
         </div>
       )}
 
@@ -697,6 +694,7 @@ const IntegrationsPage = () => {
                     <option value="Shopping">Shopping</option>
                     <option value="Bills & Utilities">Bills & Utilities</option>
                     <option value="Entertainment">Entertainment</option>
+                    <option value="Personal">Personal</option>
                   </select>
                 </div>
 

@@ -11,49 +11,91 @@ const { getUserProfile, updateUserProfile } = require('../controllers/userContro
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-// --- REGISTER ---
+// --- REGISTER (PUBLIC - NO AUTHENTICATION) ---
 router.post('/register', async (req, res) => {
-  const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
 
-  if (!name || !email || !password)
-    return res.status(400).json({ message: 'All fields are required' });
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
-  const userExists = await User.findOne({ email });
-  if (userExists) return res.status(400).json({ message: 'User already exists' });
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
-  const user = await User.create({ name, email, password });
-  if (user) {
-    return res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      profilePicture: user.profilePicture, // Default placeholder
-      token: generateToken(user._id),
+    // Create user
+    const user = await User.create({ name, email, password });
+    
+    if (user) {
+      return res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        token: generateToken(user._id),
+      });
+    } else {
+      return res.status(400).json({ message: 'Invalid user data' });
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ 
+      message: 'Server error during registration',
+      error: error.message 
     });
-  } else {
-    return res.status(400).json({ message: 'Invalid user data' });
   }
 });
 
-// --- LOGIN ---
+// --- LOGIN (PUBLIC - NO AUTHENTICATION) ---
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
-  if (user && (await user.matchPassword(password))) {
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      console.log(`Login failed: User not found for email: ${email}`);
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Check password
+    const isPasswordMatch = await user.matchPassword(password);
+    
+    if (!isPasswordMatch) {
+      console.log(`Login failed: Invalid password for email: ${email}`);
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Success
+    console.log(`✅ Login successful for user: ${user.email}`);
     return res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
-      profilePicture: user.profilePicture, // Include profile picture
+      profilePicture: user.profilePicture,
       token: generateToken(user._id),
     });
-  } else {
-    return res.status(401).json({ message: 'Invalid email or password' });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ 
+      message: 'Server error during login',
+      error: error.message 
+    });
   }
 });
 
-// 🆕 Profile routes using controller functions (base64 implementation)
+// --- PROFILE ROUTES (PROTECTED - REQUIRES AUTHENTICATION) ---
 router.route('/profile')
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile);

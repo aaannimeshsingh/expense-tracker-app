@@ -1,6 +1,5 @@
-// /server/server.js
+// server/server.js - PRODUCTION READY
 
-// CONFIGURATION & INITIALIZATION
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -8,26 +7,39 @@ const cors = require('cors');
 
 const app = express();
 
+// ============================================
 // MIDDLEWARE
+// ============================================
+
+// Static files
 app.use('/uploads', express.static('uploads'));
 
-// ✅ SIMPLIFIED CORS Configuration - More Reliable
+// CORS Configuration
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://expense-tracker-app-two-ruddy.vercel.app',
-  'https://expense-tracker-app-git-main-aaannimeshsingh5-projects.vercel.app',
-  'https://expense-tracker-app-nsco.onrender.com'
-];
+  process.env.CLIENT_URL, // Add this to .env
+  /\.vercel\.app$/, // Allow all Vercel deployments
+].filter(Boolean);
 
 app.use(cors({
   origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    
+    // Check if origin matches allowed origins or regex patterns
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return allowed === origin;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('Blocked origin:', origin);
-      callback(null, true); // Allow anyway for debugging
+      console.warn('⚠️ Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -35,22 +47,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.options('*', cors());
-
-// ✅ ADD: Explicit OPTIONS handling for preflight
-app.options('*', cors());
-
-// Body parser with increased limit for receipt images
+// Body parser (increased limit for receipt images)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ ADD: Request logging middleware (helps debug CORS issues)
-app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
-  next();
-});
+// Request logging (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`📥 ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
+    next();
+  });
+}
 
+// ============================================
 // DATABASE CONNECTION
+// ============================================
+
 mongoose.connect(process.env.MONGO_URI, {
   appName: 'expenseTrackerWebApp',
 })
@@ -60,43 +72,49 @@ mongoose.connect(process.env.MONGO_URI, {
   process.exit(1);
 });
 
-// ROUTES IMPORTS
+// ============================================
+// ROUTES
+// ============================================
+
+// Health check
 app.get('/', (req, res) => res.json({ 
-  message: '✅ Expense Tracker API is running!',
   status: 'healthy',
+  message: '✅ Expense Tracker API is running!',
   timestamp: new Date().toISOString(),
-  cors: 'enabled'
+  version: '1.0.0',
+  environment: process.env.NODE_ENV || 'development'
 }));
 
-const authRoutes = require('./routes/authRoutes');
-const expenseRoutes = require('./routes/expenseRoutes');
-const budgetRoutes = require('./routes/budgetRoutes'); 
-const aiRoutes = require('./routes/aiRoutes');
-const analyticsRoutes = require('./routes/analyticsRoutes');
-const categorySuggestRoute = require('./routes/categoryRoutes'); 
-const notificationRoutes = require('./routes/notificationRoutes');
-const integrationRoutes = require('./routes/integrationRoutes');
-
-// ROUTES MOUNTING
-app.use('/api/users', authRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/budgets', budgetRoutes); 
-app.use('/api/ai', aiRoutes);
-app.use('/api/analytics', analyticsRoutes); 
-app.use('/api/categories', categorySuggestRoute); 
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/integrations', integrationRoutes);
-
-// Health check route
 app.get('/health', (req, res) => res.json({ 
   status: 'OK', 
   timestamp: new Date(),
   uptime: process.uptime(),
-  cors: 'enabled',
-  allowedOrigins: allowedOrigins
+  environment: process.env.NODE_ENV || 'development'
 }));
 
-// Debug route (DEVELOPMENT ONLY - Remove in production!)
+// API Routes
+const authRoutes = require('./routes/authRoutes');
+const expenseRoutes = require('./routes/expenseRoutes');
+const budgetRoutes = require('./routes/budgetRoutes');
+const aiRoutes = require('./routes/aiRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const categorySuggestRoute = require('./routes/categoryRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const integrationRoutes = require('./routes/integrationRoutes');
+
+app.use('/api/users', authRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/budgets', budgetRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/categories', categorySuggestRoute);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/integrations', integrationRoutes);
+
+// ============================================
+// DEBUG ROUTES (DEVELOPMENT ONLY)
+// ============================================
+
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/debug/all-data', async (req, res) => {
     try {
@@ -116,31 +134,73 @@ if (process.env.NODE_ENV !== 'production') {
       res.status(500).json({ message: 'Error fetching data', error: error.message });
     }
   });
+  
+  console.log('🔧 Debug routes enabled (development mode)');
 }
+
+// ============================================
+// ERROR HANDLERS
+// ============================================
 
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({ 
     message: '❌ Route not found',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    timestamp: new Date().toISOString()
   });
 });
 
-// GLOBAL ERROR HANDLER
+// Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('💥 Server Error:', err.stack);
+  console.error('💥 Server Error:', err);
+  
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
   res.status(err.status || 500).json({ 
     message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(isDevelopment && { 
+      stack: err.stack,
+      details: err.details 
+    })
   });
 });
 
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM received, closing server gracefully...');
+  mongoose.connection.close(false, () => {
+    console.log('✅ MongoDB connection closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('👋 SIGINT received, closing server gracefully...');
+  mongoose.connection.close(false, () => {
+    console.log('✅ MongoDB connection closed');
+    process.exit(0);
+  });
+});
+
+// ============================================
 // SERVER START
+// ============================================
+
 const PORT = process.env.PORT || 5001;
+
 app.listen(PORT, () => {
+  console.log('🚀 ====================================');
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 CORS enabled for origins:`, allowedOrigins);
-  console.log(`🔓 Wildcard Vercel origins: *.vercel.app`);
+  console.log(`🌐 CORS enabled for origins:`, allowedOrigins.filter(o => !(o instanceof RegExp)));
+  console.log(`🔓 Wildcard patterns: *.vercel.app`);
+  console.log('🚀 ====================================');
 });
+
+module.exports = app; // Export for testing

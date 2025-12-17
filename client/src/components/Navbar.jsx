@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, User, LogOut, UserCircle, X } from 'lucide-react';
+import { Bell, User, LogOut, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, api } = useAuth(); // ✅ Get api instance from AuthContext
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
@@ -23,29 +23,47 @@ const Navbar = () => {
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user || !user.token) {
-        console.warn('Skipping notification fetch: User not authenticated.');
+      // Only proceed if user exists and has a token
+      if (!user?.token) {
+        console.log('⏭️ Skipping notifications: No user token');
         setNotifications([]);
         return;
       }
       
+      setIsLoadingNotifications(true);
+      console.log('📬 Fetching notifications...');
+      
       try {
-        const res = await axios.get('https://expense-tracker-app-nsco.onrender.com/api/notifications', {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
+        // ✅ Use the api instance from AuthContext (already has auth headers)
+        const res = await api.get('/api/notifications');
+        
+        console.log('✅ Notifications fetched:', res.data.length);
         setNotifications(res.data); 
       } catch (err) {
-        console.error('Failed to fetch notifications:', err);
-        setNotifications([{ id: 0, message: 'Could not load notifications.' }]);
+        console.error('❌ Failed to fetch notifications:', err);
+        
+        // Handle 401 specifically - token is invalid or expired
+        if (err.response?.status === 401) {
+          console.warn('🔒 Authentication failed. Token may be expired.');
+          setNotifications([]);
+          // Optionally: Auto logout and redirect to login
+          // logout();
+        } else {
+          // For other errors, just clear notifications
+          setNotifications([]);
+        }
+      } finally {
+        setIsLoadingNotifications(false);
       }
     };
     
-    if (user) {
+    // Only fetch if user and token exist
+    if (user?.token) {
       fetchNotifications();
+    } else {
+      setNotifications([]);
     }
-  }, [user]);
+  }, [user?.token, api]); // Include api in dependencies
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -79,6 +97,7 @@ const Navbar = () => {
             className="p-2 text-gray-500 hover:text-indigo-600 relative rounded-full hover:bg-gray-100 transition duration-150"
             aria-label="Toggle notifications"
             name="notifications-toggle"
+            disabled={!user?.token}
           >
             <Bell className="w-6 h-6" />
             {notifications.length > 0 && (
@@ -92,7 +111,11 @@ const Navbar = () => {
                 <p className="text-sm font-semibold text-gray-700">Notifications</p>
               </div>
               <ul className="max-h-60 overflow-y-auto">
-                {notifications.length > 0 && notifications[0].id !== 0 ? (
+                {isLoadingNotifications ? (
+                  <li className="p-3 text-sm text-gray-500 text-center">Loading...</li>
+                ) : !user?.token ? (
+                  <li className="p-3 text-sm text-gray-500 text-center">Please log in to view notifications</li>
+                ) : notifications.length > 0 ? (
                   notifications.map((n) => (
                     <li
                       key={n.id}
@@ -103,9 +126,7 @@ const Navbar = () => {
                     </li>
                   ))
                 ) : (
-                  <li className="p-3 text-sm text-gray-500 text-center">
-                    {notifications.length > 0 && notifications[0].id === 0 ? notifications[0].message : 'No new notifications'}
-                  </li>
+                  <li className="p-3 text-sm text-gray-500 text-center">No new notifications</li>
                 )}
               </ul>
             </div>
@@ -126,7 +147,6 @@ const Navbar = () => {
               </p>
               <p className="text-xs text-gray-500">Financial Analyst</p>
             </div>
-            {/* 🆕 Display profile picture */}
             {user?.profilePicture ? (
               <img
                 src={user.profilePicture}
